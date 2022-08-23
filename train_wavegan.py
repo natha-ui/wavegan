@@ -35,7 +35,7 @@ def train(fps, args):
         slice_pad_end=True if args.data_first_slice else args.data_pad_end,
         repeat=True,
         shuffle=True,
-        shuffle_buffer_size=4096,
+        shuffle_buffer_size=7537, #46886, #4096
         prefetch_size=args.train_batch_size * 4,
         prefetch_gpu_num=args.data_prefetch_gpu_num)[:, :, 0]
 
@@ -70,6 +70,8 @@ def train(fps, args):
   tf.summary.histogram('G_z_rms_batch', G_z_rms)
   tf.summary.scalar('x_rms', tf.reduce_mean(x_rms))
   tf.summary.scalar('G_z_rms', tf.reduce_mean(G_z_rms))
+  #DEBUG
+  tf.summary.scalar('mem_bytes',tf.contrib.memory_stats.BytesInUse())
 
   # Make real discriminator
   with tf.name_scope('D_x'), tf.variable_scope('D'):
@@ -174,6 +176,8 @@ def train(fps, args):
         learning_rate=5e-5)
   elif args.wavegan_loss == 'wgan-gp':
     G_opt = tf.train.AdamOptimizer(
+      #1e-4 DEBUG
+      #.5 .9
         learning_rate=1e-4,
         beta1=0.5,
         beta2=0.9)
@@ -190,7 +194,13 @@ def train(fps, args):
   D_train_op = D_opt.minimize(D_loss, var_list=D_vars)
 
   # Run training
+  #DEBUGMJW
+  #TF_FORCE_GPU_ALLOW_GROWTH = "true"
+  os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+ # config = tf.ConfigProto()
+ # config.gpu_options.per_process_gpu_memory_fraction=0.9
   with tf.train.MonitoredTrainingSession(
+  #    config=config, #DEBUGMJW
       checkpoint_dir=args.train_dir,
       save_checkpoint_secs=args.train_save_secs,
       save_summaries_secs=args.train_summary_secs) as sess:
@@ -517,6 +527,8 @@ if __name__ == '__main__':
   import glob
   import sys
 
+
+
   parser = argparse.ArgumentParser()
 
   parser.add_argument('mode', type=str, choices=['train', 'preview', 'incept', 'infer'])
@@ -610,9 +622,9 @@ if __name__ == '__main__':
     wavegan_genr_pp=False,
     wavegan_genr_pp_len=512,
     wavegan_disc_phaseshuffle=2,
-    train_batch_size=64,
-    train_save_secs=300,
-    train_summary_secs=120,
+    train_batch_size=128,
+    train_save_secs=15*60,
+    train_summary_secs=360,
     preview_n=32,
     incept_metagraph_fp='./eval/inception/infer.meta',
     incept_ckpt_fp='./eval/inception/best_acc-103005',

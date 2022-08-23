@@ -18,6 +18,7 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
   Returns:
     A np.float32 array containing the audio samples at specified sample rate.
   """
+  #print("loading audio file %s" % fp)
   if fast_wav:
     # Read with scipy wavread (fast).
     _fs, _wav = wavread(fp)
@@ -33,9 +34,13 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
   else:
     # Decode with librosa load (slow but supports file formats like mp3).
     import librosa
-    _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
+    try:
+      _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
+    except:
+      print("LOADER WARNING: Failed on %s" % fp)
+      _wav,_fs=librosa.core.load('/home/matt/datasets/drumsamples/Korg_KorgS3_KorgS3Set2_Fx70.wav',sr=fs,mono=False)
     if _wav.ndim == 2:
-      _wav = np.swapaxes(_wav, 0, 1)
+      _wav=np.swapaxes(_wav,0,1)
 
   assert _wav.dtype == np.float32
 
@@ -190,7 +195,7 @@ def decode_extract_and_batch(
     if prefetch_gpu_num is not None and prefetch_gpu_num >= 0:
       dataset = dataset.apply(
           tf.data.experimental.prefetch_to_device(
-            '/device:GPU:{}'.format(prefetch_gpu_num)))
+              '/device:XLA_GPU:0'.format(prefetch_gpu_num)))
 
   # Get tensors
   iterator = dataset.make_one_shot_iterator()
