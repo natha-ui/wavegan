@@ -132,7 +132,7 @@ def decode_extract_and_batch(
       normalize=decode_normalize,
       fast_wav=decode_fast_wav)
 
-    audio = tf.py_func(
+    audio = tf.compat.v1.py_func(
         _decode_audio_closure,
         [fp],
         tf.float32,
@@ -157,11 +157,11 @@ def decode_extract_and_batch(
 
     # Randomize starting phase:
     if slice_randomize_offset:
-      start = tf.random_uniform([], maxval=slice_len, dtype=tf.int32)
+      start = tf.random.uniform([], maxval=slice_len, dtype=tf.int32)
       audio = audio[start:]
 
     # Extract sliceuences
-    audio_slices = tf.contrib.signal.frame(
+    audio_slices = tf.signal.frame(
         audio,
         slice_len,
         slice_hop,
@@ -195,9 +195,11 @@ def decode_extract_and_batch(
     if prefetch_gpu_num is not None and prefetch_gpu_num >= 0:
       dataset = dataset.apply(
           tf.data.experimental.prefetch_to_device(
-              '/device:XLA_GPU:0'.format(prefetch_gpu_num)))
+              #DEBUG
+              #'/device:XLA_GPU:0'.format(prefetch_gpu_num)))
+              '/device:GPU:0'.format(prefetch_gpu_num)))
 
   # Get tensors
-  iterator = dataset.make_one_shot_iterator()
+  iterator = tf.compat.v1.data.make_one_shot_iterator(dataset)
   
   return iterator.get_next()

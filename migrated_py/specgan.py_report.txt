@@ -1,0 +1,48 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 0 issues that require attention
+--------------------------------------------------------------------------------
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'specgan.py'
+ outputting to 'migrated_py/specgan.py'
+--------------------------------------------------------------------------------
+
+12:11: INFO: Renamed 'tf.layers.conv2d_transpose' to 'tf.compat.v1.layers.conv2d_transpose'
+19:17: INFO: Added keywords to args of function 'tf.shape'
+25:18: INFO: Renamed 'tf.image.resize_nearest_neighbor' to 'tf.compat.v1.image.resize_nearest_neighbor'
+27:18: INFO: Renamed 'tf.image.resize_bilinear' to 'tf.compat.v1.image.resize_bilinear'
+29:18: INFO: Renamed 'tf.image.resize_bicubic' to 'tf.compat.v1.image.resize_bicubic'
+33:11: INFO: Renamed 'tf.layers.conv2d' to 'tf.compat.v1.layers.conv2d'
+54:15: INFO: Added keywords to args of function 'tf.shape'
+57:26: INFO: Renamed 'tf.layers.batch_normalization' to 'tf.compat.v1.layers.batch_normalization'
+64:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+65:13: INFO: Renamed 'tf.layers.dense' to 'tf.compat.v1.layers.dense'
+72:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+79:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+86:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+93:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+100:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+106:17: INFO: Renamed 'tf.get_collection' to 'tf.compat.v1.get_collection'
+106:35: INFO: Renamed 'tf.GraphKeys' to 'tf.compat.v1.GraphKeys'
+106:66: INFO: Renamed 'tf.get_variable_scope' to 'tf.compat.v1.get_variable_scope'
+127:15: INFO: Added keywords to args of function 'tf.shape'
+130:26: INFO: Renamed 'tf.layers.batch_normalization' to 'tf.compat.v1.layers.batch_normalization'
+137:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+138:13: INFO: Renamed 'tf.layers.conv2d' to 'tf.compat.v1.layers.conv2d'
+143:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+144:13: INFO: Renamed 'tf.layers.conv2d' to 'tf.compat.v1.layers.conv2d'
+150:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+151:13: INFO: Renamed 'tf.layers.conv2d' to 'tf.compat.v1.layers.conv2d'
+157:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+158:13: INFO: Renamed 'tf.layers.conv2d' to 'tf.compat.v1.layers.conv2d'
+164:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+165:13: INFO: Renamed 'tf.layers.conv2d' to 'tf.compat.v1.layers.conv2d'
+173:7: INFO: Renamed 'tf.variable_scope' to 'tf.compat.v1.variable_scope'
+174:13: INFO: Renamed 'tf.layers.dense' to 'tf.compat.v1.layers.dense'
+--------------------------------------------------------------------------------
+

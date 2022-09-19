@@ -30,11 +30,11 @@ _LOG_EPS = 1e-6
 """
 def t_to_f(x, X_mean, X_std):
   x = x[:, :, 0]
-  X = tf.contrib.signal.stft(x, 256, 128, pad_end=True)
+  X = tf.signal.stft(x, 256, 128, pad_end=True)
   X = X[:, :, :-1]
 
   X_mag = tf.abs(X)
-  X_lmag = tf.log(X_mag + _LOG_EPS)
+  X_lmag = tf.math.log(X_mag + _LOG_EPS)
   X_norm = (X_lmag - X_mean[:-1]) / X_std[:-1]
   X_norm /= _CLIP_NSTD
   X_norm = tf.clip_by_value(X_norm, -1., 1.)
@@ -52,17 +52,17 @@ def invert_spectra_griffin_lim(X_mag, nfft, nhop, ngl):
     X = tf.complex(X_mag, tf.zeros_like(X_mag))
 
     def b(i, X_best):
-        x = tf.contrib.signal.inverse_stft(X_best, nfft, nhop)
-        X_est = tf.contrib.signal.stft(x, nfft, nhop)
+        x = tf.signal.inverse_stft(X_best, nfft, nhop)
+        X_est = tf.signal.stft(x, nfft, nhop)
         phase = X_est / tf.cast(tf.maximum(1e-8, tf.abs(X_est)), tf.complex64)
         X_best = X * phase
         return i + 1, X_best
 
     i = tf.constant(0)
     c = lambda i, _: tf.less(i, ngl)
-    _, X = tf.while_loop(c, b, [i, X], back_prop=False)
+    _, X = tf.while_loop(cond=c, body=b, loop_vars=[i, X], back_prop=False)
 
-    x = tf.contrib.signal.inverse_stft(X, nfft, nhop)
+    x = tf.signal.inverse_stft(X, nfft, nhop)
     x = x[:, :_SLICE_LEN]
 
     return x
@@ -73,7 +73,7 @@ def invert_spectra_griffin_lim(X_mag, nfft, nhop, ngl):
 """
 def f_to_t(X_norm, X_mean, X_std, ngl=16):
   X_norm = X_norm[:, :, :, 0]
-  X_norm = tf.pad(X_norm, [[0,0], [0,0], [0,1]])
+  X_norm = tf.pad(tensor=X_norm, paddings=[[0,0], [0,0], [0,1]])
   X_norm *= _CLIP_NSTD
   X_lmag = (X_norm * X_std) + X_mean
   X_mag = tf.exp(X_lmag)
@@ -102,7 +102,7 @@ def f_to_img(X_norm):
   Trains a SpecGAN
 """
 def train(fps, args):
-  with tf.name_scope('loader'):
+  with tf.compat.v1.name_scope('loader'):
     x_wav = loader.decode_extract_and_batch(
         fps,
         batch_size=args.train_batch_size,
@@ -124,12 +124,12 @@ def train(fps, args):
     x = t_to_f(x_wav, args.data_moments_mean, args.data_moments_std)
 
   # Make z vector
-  z = tf.random_uniform([args.train_batch_size, args.specgan_latent_dim], -1., 1., dtype=tf.float32)
+  z = tf.random.uniform([args.train_batch_size, args.specgan_latent_dim], -1., 1., dtype=tf.float32)
 
   # Make generator
-  with tf.variable_scope('G'):
+  with tf.compat.v1.variable_scope('G'):
     G_z = SpecGANGenerator(z, train=True, **args.specgan_g_kwargs)
-  G_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='G')
+  G_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope='G')
 
   # Print G summary
   print('-' * 80)
@@ -145,22 +145,22 @@ def train(fps, args):
   # Summarize
   x_gl = f_to_t(x, args.data_moments_mean, args.data_moments_std, args.specgan_ngl)
   G_z_gl = f_to_t(G_z, args.data_moments_mean, args.data_moments_std, args.specgan_ngl)
-  tf.summary.audio('x_wav', x_wav, args.data_sample_rate)
-  tf.summary.audio('x', x_gl, args.data_sample_rate)
-  tf.summary.audio('G_z', G_z_gl, args.data_sample_rate)
-  G_z_rms = tf.sqrt(tf.reduce_mean(tf.square(G_z_gl[:, :, 0]), axis=1))
-  x_rms = tf.sqrt(tf.reduce_mean(tf.square(x_gl[:, :, 0]), axis=1))
-  tf.summary.histogram('x_rms_batch', x_rms)
-  tf.summary.histogram('G_z_rms_batch', G_z_rms)
-  tf.summary.scalar('x_rms', tf.reduce_mean(x_rms))
-  tf.summary.scalar('G_z_rms', tf.reduce_mean(G_z_rms))
-  tf.summary.image('x', f_to_img(x))
-  tf.summary.image('G_z', f_to_img(G_z))
+  tf.compat.v1.summary.audio('x_wav', x_wav, args.data_sample_rate)
+  tf.compat.v1.summary.audio('x', x_gl, args.data_sample_rate)
+  tf.compat.v1.summary.audio('G_z', G_z_gl, args.data_sample_rate)
+  G_z_rms = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(G_z_gl[:, :, 0]), axis=1))
+  x_rms = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(x_gl[:, :, 0]), axis=1))
+  tf.compat.v1.summary.histogram('x_rms_batch', x_rms)
+  tf.compat.v1.summary.histogram('G_z_rms_batch', G_z_rms)
+  tf.compat.v1.summary.scalar('x_rms', tf.reduce_mean(input_tensor=x_rms))
+  tf.compat.v1.summary.scalar('G_z_rms', tf.reduce_mean(input_tensor=G_z_rms))
+  tf.compat.v1.summary.image('x', f_to_img(x))
+  tf.compat.v1.summary.image('G_z', f_to_img(G_z))
 
   # Make real discriminator
-  with tf.name_scope('D_x'), tf.variable_scope('D'):
+  with tf.compat.v1.name_scope('D_x'), tf.compat.v1.variable_scope('D'):
     D_x = SpecGANDiscriminator(x, **args.specgan_d_kwargs)
-  D_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='D')
+  D_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope='D')
 
   # Print D summary
   print('-' * 80)
@@ -175,7 +175,7 @@ def train(fps, args):
   print('-' * 80)
 
   # Make fake discriminator
-  with tf.name_scope('D_G_z'), tf.variable_scope('D', reuse=True):
+  with tf.compat.v1.name_scope('D_G_z'), tf.compat.v1.variable_scope('D', reuse=True):
     D_G_z = SpecGANDiscriminator(G_z, **args.specgan_d_kwargs)
 
   # Create loss
@@ -184,86 +184,86 @@ def train(fps, args):
     fake = tf.zeros([args.train_batch_size], dtype=tf.float32)
     real = tf.ones([args.train_batch_size], dtype=tf.float32)
 
-    G_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    G_loss = tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
       logits=D_G_z,
       labels=real
     ))
 
-    D_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    D_loss = tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
       logits=D_G_z,
       labels=fake
     ))
-    D_loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+    D_loss += tf.reduce_mean(input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
       logits=D_x,
       labels=real
     ))
 
     D_loss /= 2.
   elif args.specgan_loss == 'lsgan':
-    G_loss = tf.reduce_mean((D_G_z - 1.) ** 2)
-    D_loss = tf.reduce_mean((D_x - 1.) ** 2)
-    D_loss += tf.reduce_mean(D_G_z ** 2)
+    G_loss = tf.reduce_mean(input_tensor=(D_G_z - 1.) ** 2)
+    D_loss = tf.reduce_mean(input_tensor=(D_x - 1.) ** 2)
+    D_loss += tf.reduce_mean(input_tensor=D_G_z ** 2)
     D_loss /= 2.
   elif args.specgan_loss == 'wgan':
-    G_loss = -tf.reduce_mean(D_G_z)
-    D_loss = tf.reduce_mean(D_G_z) - tf.reduce_mean(D_x)
+    G_loss = -tf.reduce_mean(input_tensor=D_G_z)
+    D_loss = tf.reduce_mean(input_tensor=D_G_z) - tf.reduce_mean(input_tensor=D_x)
 
-    with tf.name_scope('D_clip_weights'):
+    with tf.compat.v1.name_scope('D_clip_weights'):
       clip_ops = []
       for var in D_vars:
         clip_bounds = [-.01, .01]
         clip_ops.append(
-          tf.assign(
+          tf.compat.v1.assign(
             var,
             tf.clip_by_value(var, clip_bounds[0], clip_bounds[1])
           )
         )
       D_clip_weights = tf.group(*clip_ops)
   elif args.specgan_loss == 'wgan-gp':
-    G_loss = -tf.reduce_mean(D_G_z)
-    D_loss = tf.reduce_mean(D_G_z) - tf.reduce_mean(D_x)
+    G_loss = -tf.reduce_mean(input_tensor=D_G_z)
+    D_loss = tf.reduce_mean(input_tensor=D_G_z) - tf.reduce_mean(input_tensor=D_x)
 
-    alpha = tf.random_uniform(shape=[args.train_batch_size, 1, 1, 1], minval=0., maxval=1.)
+    alpha = tf.random.uniform(shape=[args.train_batch_size, 1, 1, 1], minval=0., maxval=1.)
     differences = G_z - x
     interpolates = x + (alpha * differences)
-    with tf.name_scope('D_interp'), tf.variable_scope('D', reuse=True):
+    with tf.compat.v1.name_scope('D_interp'), tf.compat.v1.variable_scope('D', reuse=True):
       D_interp = SpecGANDiscriminator(interpolates, **args.specgan_d_kwargs)
 
     LAMBDA = 10
-    gradients = tf.gradients(D_interp, [interpolates])[0]
-    slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1, 2]))
-    gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2.)
+    gradients = tf.gradients(ys=D_interp, xs=[interpolates])[0]
+    slopes = tf.sqrt(tf.reduce_sum(input_tensor=tf.square(gradients), axis=[1, 2]))
+    gradient_penalty = tf.reduce_mean(input_tensor=(slopes - 1.) ** 2.)
     D_loss += LAMBDA * gradient_penalty
   else:
     raise NotImplementedError()
 
-  tf.summary.scalar('G_loss', G_loss)
-  tf.summary.scalar('D_loss', D_loss)
+  tf.compat.v1.summary.scalar('G_loss', G_loss)
+  tf.compat.v1.summary.scalar('D_loss', D_loss)
 
   # Create (recommended) optimizer
   if args.specgan_loss == 'dcgan':
-    G_opt = tf.train.AdamOptimizer(
+    G_opt = tf.compat.v1.train.AdamOptimizer(
         learning_rate=2e-4,
         beta1=0.5)
-    D_opt = tf.train.AdamOptimizer(
+    D_opt = tf.compat.v1.train.AdamOptimizer(
         learning_rate=2e-4,
         beta1=0.5)
   elif args.specgan_loss == 'lsgan':
-    G_opt = tf.train.RMSPropOptimizer(
+    G_opt = tf.compat.v1.train.RMSPropOptimizer(
         learning_rate=1e-4)
-    D_opt = tf.train.RMSPropOptimizer(
+    D_opt = tf.compat.v1.train.RMSPropOptimizer(
         learning_rate=1e-4)
   elif args.specgan_loss == 'wgan':
-    G_opt = tf.train.RMSPropOptimizer(
+    G_opt = tf.compat.v1.train.RMSPropOptimizer(
         learning_rate=5e-5)
-    D_opt = tf.train.RMSPropOptimizer(
+    D_opt = tf.compat.v1.train.RMSPropOptimizer(
         learning_rate=5e-5)
   elif args.specgan_loss == 'wgan-gp':
-    G_opt = tf.train.AdamOptimizer(
+    G_opt = tf.compat.v1.train.AdamOptimizer(
         learning_rate=1e-4,
         beta1=0.5,
         beta2=0.9)
-    D_opt = tf.train.AdamOptimizer(
+    D_opt = tf.compat.v1.train.AdamOptimizer(
         learning_rate=1e-4,
         beta1=0.5,
         beta2=0.9)
@@ -272,11 +272,11 @@ def train(fps, args):
 
   # Create training ops
   G_train_op = G_opt.minimize(G_loss, var_list=G_vars,
-      global_step=tf.train.get_or_create_global_step())
+      global_step=tf.compat.v1.train.get_or_create_global_step())
   D_train_op = D_opt.minimize(D_loss, var_list=D_vars)
 
   # Run training
-  with tf.train.MonitoredTrainingSession(
+  with tf.compat.v1.train.MonitoredTrainingSession(
       checkpoint_dir=args.train_dir,
       save_checkpoint_secs=args.train_save_secs,
       save_summaries_secs=args.train_summary_secs) as sess:
@@ -330,16 +330,16 @@ def infer(args):
     os.makedirs(infer_dir)
 
   # Subgraph that generates latent vectors
-  samp_z_n = tf.placeholder(tf.int32, [], name='samp_z_n')
-  samp_z = tf.random_uniform([samp_z_n, args.specgan_latent_dim], -1.0, 1.0, dtype=tf.float32, name='samp_z')
+  samp_z_n = tf.compat.v1.placeholder(tf.int32, [], name='samp_z_n')
+  samp_z = tf.random.uniform([samp_z_n, args.specgan_latent_dim], -1.0, 1.0, dtype=tf.float32, name='samp_z')
 
   # Input zo
-  z = tf.placeholder(tf.float32, [None, args.specgan_latent_dim], name='z')
-  ngl = tf.placeholder(tf.int32, [], name='ngl')
-  flat_pad = tf.placeholder(tf.int32, [], name='flat_pad')
+  z = tf.compat.v1.placeholder(tf.float32, [None, args.specgan_latent_dim], name='z')
+  ngl = tf.compat.v1.placeholder(tf.int32, [], name='ngl')
+  flat_pad = tf.compat.v1.placeholder(tf.int32, [], name='flat_pad')
 
   # Execute generator
-  with tf.variable_scope('G'):
+  with tf.compat.v1.variable_scope('G'):
     G_z_norm = SpecGANGenerator(z, train=False, **args.specgan_g_kwargs)
   G_z_norm = tf.identity(G_z_norm, name='G_z_norm')
   G_z = f_to_t(G_z_norm, args.data_moments_mean, args.data_moments_std, ngl)
@@ -350,7 +350,7 @@ def infer(args):
 
   # Flatten batch
   nch = int(G_z.get_shape()[-1])
-  G_z_padded = tf.pad(G_z, [[0, 0], [0, flat_pad], [0, 0]])
+  G_z_padded = tf.pad(tensor=G_z, paddings=[[0, 0], [0, flat_pad], [0, 0]])
   G_z_flat = tf.reshape(G_z_padded, [-1, nch], name='G_z_flat')
 
   # Encode to int16
@@ -363,22 +363,22 @@ def infer(args):
   G_z_flat_int16 = float_to_int16(G_z_flat, name='G_z_flat_int16')
 
   # Create saver
-  G_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='G')
-  global_step = tf.train.get_or_create_global_step()
-  saver = tf.train.Saver(G_vars + [global_step])
+  G_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope='G')
+  global_step = tf.compat.v1.train.get_or_create_global_step()
+  saver = tf.compat.v1.train.Saver(G_vars + [global_step])
 
   # Export graph
-  tf.train.write_graph(tf.get_default_graph(), infer_dir, 'infer.pbtxt')
+  tf.io.write_graph(tf.compat.v1.get_default_graph(), infer_dir, 'infer.pbtxt')
 
   # Export MetaGraph
   infer_metagraph_fp = os.path.join(infer_dir, 'infer.meta')
-  tf.train.export_meta_graph(
+  tf.compat.v1.train.export_meta_graph(
       filename=infer_metagraph_fp,
       clear_devices=True,
       saver_def=saver.as_saver_def())
 
   # Reset graph (in case training afterwards)
-  tf.reset_default_graph()
+  tf.compat.v1.reset_default_graph()
 
 
 """
@@ -394,8 +394,8 @@ def preview(args):
 
   # Load graph
   infer_metagraph_fp = os.path.join(args.train_dir, 'infer', 'infer.meta')
-  graph = tf.get_default_graph()
-  saver = tf.train.import_meta_graph(infer_metagraph_fp)
+  graph = tf.compat.v1.get_default_graph()
+  saver = tf.compat.v1.train.import_meta_graph(infer_metagraph_fp)
 
   # Generate or restore z_i and z_o
   z_fp = os.path.join(preview_dir, 'z.pkl')
@@ -408,7 +408,7 @@ def preview(args):
     samp_feeds[graph.get_tensor_by_name('samp_z_n:0')] = args.preview_n
     samp_fetches = {}
     samp_fetches['zs'] = graph.get_tensor_by_name('samp_z:0')
-    with tf.Session() as sess:
+    with tf.compat.v1.Session() as sess:
       _samp_fetches = sess.run(samp_fetches, samp_feeds)
     _zs = _samp_fetches['zs']
 
@@ -422,17 +422,17 @@ def preview(args):
   feeds[graph.get_tensor_by_name('ngl:0')] = args.specgan_ngl
   feeds[graph.get_tensor_by_name('flat_pad:0')] = _SLICE_LEN // 2
   fetches =  {}
-  fetches['step'] = tf.train.get_or_create_global_step()
+  fetches['step'] = tf.compat.v1.train.get_or_create_global_step()
   fetches['G_z'] = graph.get_tensor_by_name('G_z:0')
   fetches['G_z_flat_int16'] = graph.get_tensor_by_name('G_z_flat_int16:0')
 
   # Summarize
   G_z = graph.get_tensor_by_name('G_z_flat:0')
   summaries = [
-      tf.summary.audio('preview', tf.expand_dims(G_z, axis=0), args.data_sample_rate, max_outputs=1)
+      tf.compat.v1.summary.audio('preview', tf.expand_dims(G_z, axis=0), args.data_sample_rate, max_outputs=1)
   ]
-  fetches['summaries'] = tf.summary.merge(summaries)
-  summary_writer = tf.summary.FileWriter(preview_dir)
+  fetches['summaries'] = tf.compat.v1.summary.merge(summaries)
+  summary_writer = tf.compat.v1.summary.FileWriter(preview_dir)
 
   # Loop, waiting for checkpoints
   ckpt_fp = None
@@ -441,7 +441,7 @@ def preview(args):
     if latest_ckpt_fp != ckpt_fp:
       print('Preview: {}'.format(latest_ckpt_fp))
 
-      with tf.Session() as sess:
+      with tf.compat.v1.Session() as sess:
         saver.restore(sess, latest_ckpt_fp)
 
         _fetches = sess.run(fetches, feeds)
@@ -472,8 +472,8 @@ def incept(args):
   gan_graph = tf.Graph()
   with gan_graph.as_default():
     infer_metagraph_fp = os.path.join(args.train_dir, 'infer', 'infer.meta')
-    gan_saver = tf.train.import_meta_graph(infer_metagraph_fp)
-    score_saver = tf.train.Saver(max_to_keep=1)
+    gan_saver = tf.compat.v1.train.import_meta_graph(infer_metagraph_fp)
+    score_saver = tf.compat.v1.train.Saver(max_to_keep=1)
   gan_z = gan_graph.get_tensor_by_name('z:0')
   gan_ngl = gan_graph.get_tensor_by_name('ngl:0')
   gan_G_z = gan_graph.get_tensor_by_name('G_z:0')[:, :, 0]
@@ -487,7 +487,7 @@ def incept(args):
   else:
     gan_samp_z_n = gan_graph.get_tensor_by_name('samp_z_n:0')
     gan_samp_z = gan_graph.get_tensor_by_name('samp_z:0')
-    with tf.Session(graph=gan_graph) as sess:
+    with tf.compat.v1.Session(graph=gan_graph) as sess:
       _zs = sess.run(gan_samp_z, {gan_samp_z_n: args.incept_n})
     with open(z_fp, 'wb') as f:
       pickle.dump(_zs, f)
@@ -495,23 +495,23 @@ def incept(args):
   # Load classifier graph
   incept_graph = tf.Graph()
   with incept_graph.as_default():
-    incept_saver = tf.train.import_meta_graph(args.incept_metagraph_fp)
+    incept_saver = tf.compat.v1.train.import_meta_graph(args.incept_metagraph_fp)
   incept_x = incept_graph.get_tensor_by_name('x:0')
   incept_preds = incept_graph.get_tensor_by_name('scores:0')
-  incept_sess = tf.Session(graph=incept_graph)
+  incept_sess = tf.compat.v1.Session(graph=incept_graph)
   incept_saver.restore(incept_sess, args.incept_ckpt_fp)
 
   # Create summaries
   summary_graph = tf.Graph()
   with summary_graph.as_default():
-    incept_mean = tf.placeholder(tf.float32, [])
-    incept_std = tf.placeholder(tf.float32, [])
+    incept_mean = tf.compat.v1.placeholder(tf.float32, [])
+    incept_std = tf.compat.v1.placeholder(tf.float32, [])
     summaries = [
-        tf.summary.scalar('incept_mean', incept_mean),
-        tf.summary.scalar('incept_std', incept_std)
+        tf.compat.v1.summary.scalar('incept_mean', incept_mean),
+        tf.compat.v1.summary.scalar('incept_std', incept_std)
     ]
-    summaries = tf.summary.merge(summaries)
-  summary_writer = tf.summary.FileWriter(incept_dir)
+    summaries = tf.compat.v1.summary.merge(summaries)
+  summary_writer = tf.compat.v1.summary.FileWriter(incept_dir)
 
   # Loop, waiting for checkpoints
   ckpt_fp = None
@@ -521,7 +521,7 @@ def incept(args):
     if latest_ckpt_fp != ckpt_fp:
       print('Incept: {}'.format(latest_ckpt_fp))
 
-      sess = tf.Session(graph=gan_graph)
+      sess = tf.compat.v1.Session(graph=gan_graph)
 
       gan_saver.restore(sess, latest_ckpt_fp)
 
@@ -549,7 +549,7 @@ def incept(args):
       _incept_mean, _incept_std = np.mean(_incept_scores), np.std(_incept_scores)
 
       # Summarize
-      with tf.Session(graph=summary_graph) as summary_sess:
+      with tf.compat.v1.Session(graph=summary_graph) as summary_sess:
         _summaries = summary_sess.run(summaries, {incept_mean: _incept_mean, incept_std: _incept_std})
       summary_writer.add_summary(_summaries, _step)
 
@@ -573,7 +573,7 @@ def incept(args):
   Calculates and saves dataset moments
 """
 def moments(fps, args):
-  with tf.name_scope('loader'):
+  with tf.compat.v1.name_scope('loader'):
     x_wav = loader.decode_extract_and_batch(
         fps,
         batch_size=1,
@@ -592,12 +592,12 @@ def moments(fps, args):
         prefetch_size=4,
         prefetch_gpu_num=args.data_prefetch_gpu_num)[0, :, 0, 0]
 
-  X = tf.contrib.signal.stft(x_wav, 256, 128, pad_end=True)
+  X = tf.signal.stft(x_wav, 256, 128, pad_end=True)
   X_mag = tf.abs(X)
-  X_lmag = tf.log(X_mag + _LOG_EPS)
+  X_lmag = tf.math.log(X_mag + _LOG_EPS)
 
   _X_lmags = []
-  with tf.Session() as sess:
+  with tf.compat.v1.Session() as sess:
     while True:
       try:
         _X_lmag = sess.run(X_lmag)

@@ -1,0 +1,1 @@
+python3.7 train_wavegan.py train /home/matt/tf_runs/kick_set_1_run_3 --data_dir ~/datasets/kick_set_1 --data_slice_len 65536 --data_sample_rate 44100 --wavegan_dim 64 --data_first_slice --data_pad_end --train_batch_size 32 --preview_n 3

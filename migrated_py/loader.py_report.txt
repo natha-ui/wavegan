@@ -1,0 +1,27 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 2 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: loader.py
+--------------------------------------------------------------------------------
+loader.py:164:19: ERROR: Using member tf.contrib.signal.frame in deprecated module tf.contrib. tf.contrib.signal.frame cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+loader.py:201:13: WARNING: Changing dataset.make_one_shot_iterator() to tf.compat.v1.data.make_one_shot_iterator(dataset). Please check this transformation.
+
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'loader.py'
+ outputting to 'migrated_py/loader.py'
+--------------------------------------------------------------------------------
+
+135:12: INFO: Renamed 'tf.py_func' to 'tf.compat.v1.py_func'
+160:14: INFO: Renamed 'tf.random_uniform' to 'tf.random.uniform'
+164:19: ERROR: Using member tf.contrib.signal.frame in deprecated module tf.contrib. tf.contrib.signal.frame cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+201:13: WARNING: Changing dataset.make_one_shot_iterator() to tf.compat.v1.data.make_one_shot_iterator(dataset). Please check this transformation.
+
+--------------------------------------------------------------------------------
+
