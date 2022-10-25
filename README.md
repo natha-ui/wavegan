@@ -4,7 +4,6 @@ This is a fork of Chris Donahue's **WaveGAN** (v2) that has been naively migrate
 
 Some extremely minor tweaks have been made; everything in here is essentially exactly the same as it was in the original repository from Chris Donahue, with tensorflow calls updated where needed to use the tf.compat.v1 libraries from tf2. Nothing more sophisticated than that has been attempted. There is likely a lot of room for improvement.
 
-All credit must remain with the original creators of WaveGAN.
 
 The following is the original README from Chris Donahue's original repository.
 
