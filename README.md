@@ -6,7 +6,7 @@ Some extremely minor tweaks have been made; everything in here is essentially ex
 
 All credit must remain with the original creators of WaveGAN.
 
-The following is the original README from Chris Donahues original repository.
+The following is the original README from Chris Donahue's original repository.
 
 # WaveGAN (v2)
 
