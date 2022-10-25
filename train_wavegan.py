@@ -180,6 +180,7 @@ def train(fps, args):
         beta1=0.5,
         beta2=0.9)
     D_opt = tf.compat.v1.train.AdamOptimizer(
+            #was 1e-4
         learning_rate=1e-4,
         beta1=0.5,
         beta2=0.9)
@@ -624,7 +625,7 @@ if __name__ == '__main__':
     wavegan_genr_pp_len=512,
     wavegan_disc_phaseshuffle=2,
     train_batch_size=128,
-    train_save_secs=15*60,
+    train_save_secs=60*15,
     train_summary_secs=360,
     preview_n=32,
     incept_metagraph_fp='./eval/inception/infer.meta',

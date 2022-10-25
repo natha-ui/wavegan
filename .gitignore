@@ -5,3 +5,4 @@
 *.tar.gz
 train
 web/ckpts
+LAST_COMMAND*
