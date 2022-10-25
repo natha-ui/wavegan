@@ -1,1 +1,0 @@
-python3.7 train_wavegan.py train ~/tf_runs/results_roland_drums --data_dir ~/datasets/RolandDrumDataset --data_slice_len 65536 --data_sample_rate 44100 --wavegan_dim 42 --data_first_slice --data_pad_end --data_normalize --train_batch_size  64 --preview_n 3
