@@ -1,9 +1,0 @@
-#!/bin/sh
-#d=../model_kick_set_1_run_2_441khz_65536_ckpt_$1
-d=[PIPELINE_MODEL_DIR]
-mkdir $d
-cp args.txt $d/
-cp -r infer $d/
-cp checkpoint $d/
-cp *$1* $d/
-echo Done $1
