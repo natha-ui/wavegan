@@ -1,6 +1,6 @@
 # WaveGAN (v2) converted for Tensorflow Version 2
 
-This is a fork of Chris Donahue's **WaveGAN** (v2) that has been naively, brute-force migrated to run on Tensorflow v2. This enables compatability with the latest NVidia libraries required to train on RTX 3 series and later GPUs. (Tested on RTX3090 in a Windows WSL v2 config).
+This is a fork of Chris Donahue's **WaveGAN** (v2) that has been naively, brute-force migrated to run on Tensorflow v2. This enables compatability with the latest NVidia libraries required to train using NVidia CUDA on RTX 3 series and later GPUs. (Tested on RTX3090 in a Windows WSL v2 instance).
 
 Some extremely minor tweaks have been made; everything in here is essentially exactly the same as it was in the original repository from Chris Donahue, with tensorflow calls updated where needed to use the tf.compat.v1 libraries from tf2. Nothing more sophisticated than that has been attempted. There is likely a lot of room for improvement.
 
