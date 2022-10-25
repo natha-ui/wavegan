@@ -2,7 +2,7 @@
 
 This is a fork of Chris Donahue's **WaveGAN** (v2) that has been naively, brute-force migrated to run on Tensorflow v2. This enables compatability with the latest NVidia libraries required to train on RTX 3 series and later GPUs. (Tested on RTX3090 in a Windows WSL v2 config).
 
-Some extremely minor tweaks have been made; everything in here is essentially exactly the same as it was in the original repository from Chris Donahue, with tensorflow calls updated where needed to use the tf2 compat libraries from tf2. Nothing more sophistaicated than that has been attmepted. There is likely a lot of room for improvement.
+Some extremely minor tweaks have been made; everything in here is essentially exactly the same as it was in the original repository from Chris Donahue, with tensorflow calls updated where needed to use the tf2 compat libraries from tf2. Nothing more sophisticated than that has been attempted. There is likely a lot of room for improvement.
 
 All credit must remain with the original creators of WaveGAN.
 
