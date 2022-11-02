@@ -174,16 +174,14 @@ def train(fps, args):
         learning_rate=5e-5)
   elif args.wavegan_loss == 'wgan-gp':
     G_opt = tf.compat.v1.train.AdamOptimizer(
-      #1e-4 DEBUG
-      #.5 .9
-        learning_rate=1e-4,
-        beta1=0.5,
-        beta2=0.9)
+        learning_rate=args.wavegan_genr_wgangp_learn,
+        beta1=args.wavegan_genr_wgangp_beta1,
+        beta2=args.wavegan_genr_wgangp_beta2)
     D_opt = tf.compat.v1.train.AdamOptimizer(
-            #was 1e-4
-        learning_rate=1e-4,
-        beta1=0.5,
-        beta2=0.9)
+        learning_rate=args.wavegan_disc_wgangp_learn,
+        beta1=args.wavegan_disc_wgangp_beta1,
+        beta2=args.wavegan_disc_wgangp_beta2)
+
   else:
     raise NotImplementedError()
 
@@ -580,6 +578,18 @@ if __name__ == '__main__':
       help='Length of post-processing filter for DCGAN')
   wavegan_args.add_argument('--wavegan_disc_phaseshuffle', type=int,
       help='Radius of phase shuffle operation')
+  wavegan_args.add_argument('--wavegan_genr_wgangp_learn', type=float,
+      help='Generator wgan-gp Adam Optimizer learning rate, default 0.0001')
+  wavegan_args.add_argument('--wavegan_genr_wgangp_beta1', type=float,
+      help='Generator wgan-gp Adam Optimizer beta1, default 0.5')
+  wavegan_args.add_argument('--wavegan_genr_wgangp_beta2', type=float,
+      help='Generator wgan-gp Adam Optimizer beta2, default 0.9')
+  wavegan_args.add_argument('--wavegan_disc_wgangp_learn', type=float,
+      help='Discriminator wgan-gp Adam Optimizer learning rate, default 0.0001')
+  wavegan_args.add_argument('--wavegan_disc_wgangp_beta1', type=float,
+      help='Discriminator wgan-gp Adam Optimizer beta1, default 0.5')
+  wavegan_args.add_argument('--wavegan_disc_wgangp_beta2', type=float,
+      help='Discriminator wgan-gp Adam Optimizer beta2, default 0.9')
 
   train_args = parser.add_argument_group('Train')
   train_args.add_argument('--train_batch_size', type=int,
@@ -624,6 +634,12 @@ if __name__ == '__main__':
     wavegan_genr_pp=False,
     wavegan_genr_pp_len=512,
     wavegan_disc_phaseshuffle=2,
+    wavegan_genr_wgangp_learn=0.0001,
+    wavegan_genr_wgangp_beta1=0.5,
+    wavegan_genr_wgangp_beta2=0.9,
+    wavegan_disc_wgangp_learn=0.0001,
+    wavegan_disc_wgangp_beta1=0.5,
+    wavegan_disc_wgangp_beta2=0.9,
     train_batch_size=128,
     train_save_secs=60*15,
     train_summary_secs=360,
