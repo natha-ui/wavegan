@@ -2,6 +2,7 @@ import sys
 from tensorboard.backend.event_processing import event_accumulator
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 
 def parse_tensorboard(path, scalars):
@@ -32,4 +33,9 @@ if __name__=='__main__':
         plt.plot(smoothed[p]["value"])
         plt.title(scalars[p])
         plt.grid(alpha=0.3)
-        plt.savefig((scalars[p]+'.svg').replace('/','_'))
+        fname=os.path.join(events_path,(scalars[p]+'.svg').replace('/','_'))
+        try:
+            os.remove(fname)
+        except:
+            pass
+        plt.savefig(fname)
