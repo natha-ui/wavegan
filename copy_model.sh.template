@@ -2,8 +2,14 @@
 #d=../model_kick_set_1_run_2_441khz_65536_ckpt_$1
 d=[PIPELINE_MODEL_DIR]
 mkdir $d
-cp args.txt $d/
-cp -r infer $d/
-cp checkpoint $d/
-cp *$1* $d/
+if [[ ${2:-partial} == "partial" ]]
+then
+    cp args.txt $d/
+    cp -r infer $d/
+    cp checkpoint $d/
+    cp *$1* $d/
+else
+#todo: only capture the last checkpoint, dont need the others
+    cp -r * $d/
+fi
 echo Done $1
