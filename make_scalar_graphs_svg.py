@@ -29,6 +29,7 @@ if __name__=='__main__':
     for scalar in scalars:
         smoothed.append(data_frames[scalar].ewm(alpha=1-0.95).mean())
     for p in range(3):
+        
         plt.plot(data_frames[scalars[p]]["value"],alpha=0.4)
         plt.plot(smoothed[p]["value"])
         plt.title(scalars[p])
@@ -39,3 +40,4 @@ if __name__=='__main__':
         except:
             pass
         plt.savefig(fname)
+        plt.clf()
