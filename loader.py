@@ -189,4 +189,4 @@ def decode_extract_and_batch(
     
     # Get tensors
    
-    return iter(dataset)
+    return next(iter(dataset))
