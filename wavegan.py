@@ -11,7 +11,7 @@ def conv1d_transpose(
     upsample='zeros'):
     
     if upsample == 'zeros':
-        return Conv1DTranspose(filters, kernel_size=kernel_width, strides=stride, padding=padding)(tf.expand_dims(inputs, axis=1))[:, 0]
+        return Conv1DTranspose(filters, kernel_size=kernel_width, strides=stride, padding=padding)(inputs)
     elif upsample == 'nn':
         batch_size = tf.shape(inputs)[0]
         _, w, nch = inputs.shape
