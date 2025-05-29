@@ -1,14 +1,4 @@
 from __future__ import print_function
-from scipy.io.wavfile import read as wavread
-import numpy as np
-import tensorflow as tf
-import sys
-
-import numpy as np
-from scipy.io import wavread
-import librosa
-import tensorflow as tf
-
 import numpy as np
 from scipy.io import wavfile
 import librosa
