@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.keras import layers
 from tensorflow.keras.layers import Conv1DTranspose, Conv1D, BatchNormalization, Dense, Reshape
 from tensorflow.keras.models import Model
 class WaveGANGenerator(Model):
