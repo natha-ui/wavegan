@@ -37,7 +37,9 @@ def train(fps, args):
      shuffle=True,
      shuffle_buffer_size=4096,
      prefetch_size=args.train_batch_size * 4,
-     prefetch_gpu_num=args.data_prefetch_gpu_num)[:,:,0]
+     prefetch_gpu_num=args.data_prefetch_gpu_num)
+
+    x = x.map(lambda batch: batch[:, :, 0])
    
     # Make z vector
     # Generate latent vector z
