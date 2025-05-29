@@ -550,7 +550,11 @@ if __name__ == '__main__':
         incept_ckpt_fp='./eval/inception/best_acc-103005',
         incept_n=5000,
         incept_k=10)
-    args = parser.parse_args()
+    import sys
+    args = parser.parse_args(args=[
+    '--mode', 'train',
+    '--train_dir', 'train_logs/'  # or another directory of your choice
+    ])
 
     # Make train dir
     if not os.path.isdir(args.train_dir):
