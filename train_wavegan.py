@@ -40,8 +40,8 @@ def train(fps, args):
     prefetch_gpu_num=args.data_prefetch_gpu_num
   )
 
-   for item in dataset:
-     x = item[:, :, 0]
+    for item in dataset:
+      x = item[:, :, 0]
     # Your processing code here
 
     # Make z vector
