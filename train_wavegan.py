@@ -39,11 +39,7 @@ def train(fps, args):
     prefetch_size=args.train_batch_size * 4,
     prefetch_gpu_num=args.data_prefetch_gpu_num
   )
-
-    for item in dataset:
-      x = item[:, :, 0]
-    # Your processing code here
-
+   
     # Make z vector
     z = tf.random.uniform([args.train_batch_size, args.wavegan_latent_dim], -1., 1., dtype=tf.float32)
 
