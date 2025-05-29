@@ -1,132 +1,87 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Conv1DTranspose, Conv1D, BatchNormalization, Dense, Reshape
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import layers, Model
+class WaveGANGenerator(Model):
+    def __init__(self, slice_len=16384, nch=1, kernel_len=25, dim=64,
+                 use_batchnorm=False, upsample='zeros'):
+        super(WaveGANGenerator, self).__init__()
+        assert slice_len in [16384, 32768, 65536]
+        self.slice_len = slice_len
+        self.nch = nch
+        self.kernel_len = kernel_len
+        self.dim = dim
+        self.use_batchnorm = use_batchnorm
+        self.upsample = upsample
 
-def conv1d_transpose(
-    inputs,
-    filters,
-    kernel_width,
-    stride=4,
-    padding='same',
-    upsample='zeros'):
-    
-    if upsample == 'zeros':
-        return Conv1DTranspose(filters, kernel_size=kernel_width, strides=stride, padding=padding)(inputs)
-    elif upsample == 'nn':
-        batch_size = tf.shape(inputs)[0]
-        _, w, nch = inputs.shape
-        x = inputs
-        x = tf.expand_dims(x, axis=1)
-        x = tf.image.resize(x, [1, w * stride], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-        x = x[:, 0]
-        return Conv1D(filters, kernel_size=kernel_width, strides=1, padding=padding)(x)
-    else:
-        raise NotImplementedError
+        dim_mul = 16 if slice_len == 16384 else 32
+        self.fc = layers.Dense(16 * dim * dim_mul)
+        self.reshape = layers.Reshape((16, dim * dim_mul))
+        self.bn_layers = []
 
-def WaveGANGenerator(
-    z,
-    slice_len=16384,
-    nch=1,
-    kernel_len=25,
-    dim=64,
-    use_batchnorm=False,
-    upsample='zeros',
-    train=False):
-    
-    assert slice_len in [16384, 32768, 65536]
-    batch_size = tf.shape(z)[0]
-    
-    if use_batchnorm:
-        batchnorm = lambda x: BatchNormalization()(x)
-    else:
-        batchnorm = lambda x: x
-    
-    # FC and reshape for convolution
-    # [100] -> [16, 1024]
-    dim_mul = 16 if slice_len == 16384 else 32
-    output = z
-    with tf.name_scope('z_project'):
-        output = Dense(16 * dim * dim_mul)(output)
-        output = Reshape((16, dim * dim_mul))(output)
-        output = batchnorm(output)
-    output = tf.nn.relu(output)
-    dim_mul //= 2
-    
-    # Layer 0
-    # [16, 1024] -> [64, 512]
-    with tf.name_scope('upconv_0'):
-        output = conv1d_transpose(output, dim * dim_mul, kernel_len, 4, upsample=upsample)
-        output = batchnorm(output)
-    output = tf.nn.relu(output)
-    dim_mul //= 2
-    
-    # Layer 1
-    # [64, 512] -> [256, 256]
-    with tf.name_scope('upconv_1'):
-        output = conv1d_transpose(output, dim * dim_mul, kernel_len, 4, upsample=upsample)
-        output = batchnorm(output)
-    output = tf.nn.relu(output)
-    dim_mul //= 2
-    
-    # Layer 2
-    # [256, 256] -> [1024, 128]
-    with tf.name_scope('upconv_2'):
-        output = conv1d_transpose(output, dim * dim_mul, kernel_len, 4, upsample=upsample)
-        output = batchnorm(output)
-    output = tf.nn.relu(output)
-    dim_mul //= 2
-    
-    # Layer 3
-    # [1024, 128] -> [4096, 64]
-    with tf.name_scope('upconv_3'):
-        output = conv1d_transpose(output, dim * dim_mul, kernel_len, 4, upsample=upsample)
-        output = batchnorm(output)
-    output = tf.nn.relu(output)
-    dim_mul //= 2
-    
-    if slice_len == 16384:
-        # Layer 4
-        # [4096, 64] -> [16384, nch]
-        with tf.name_scope('upconv_4'):
-            output = conv1d_transpose(output, nch, kernel_len, 4, upsample=upsample)
-        output = tf.nn.tanh(output)
-    elif slice_len == 32768:
-        # Layer 4
-        # [4096, 128] -> [16384, 64]
-        with tf.name_scope('upconv_4'):
-            output = conv1d_transpose(output, dim, kernel_len, 4, upsample=upsample)
-            output = batchnorm(output)
-        output = tf.nn.relu(output)
-        # Layer 5
-        # [16384, 64] -> [32768, nch]
-        with tf.name_scope('upconv_5'):
-            output = conv1d_transpose(output, nch, kernel_len, 2, upsample=upsample)
-        output = tf.nn.tanh(output)
-    elif slice_len == 65536:
-        # Layer 4
-        # [4096, 128] -> [16384, 64]
-        with tf.name_scope('upconv_4'):
-            output = conv1d_transpose(output, dim, kernel_len, 4, upsample=upsample)
-            output = batchnorm(output)
-        output = tf.nn.relu(output)
-        # Layer 5
-        # [16384, 64] -> [65536, nch]
-        with tf.name_scope('upconv_5'):
-            output = conv1d_transpose(output, nch, kernel_len, 4, upsample=upsample)
-        output = tf.nn.tanh(output)
-    
-    # Automatically update batchnorm moving averages every time G is used during training
-    if train and use_batchnorm:
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope=tf.get_variable_scope().name)
+        def bn_layer():
+            return layers.BatchNormalization() if use_batchnorm else tf.identity
+
+        self.upconvs = []
+        for _ in range(4):
+            dim_mul //= 2
+            self.upconvs.append((dim * dim_mul, bn_layer()))
         if slice_len == 16384:
-            assert len(update_ops) == 10
-        else:
-            assert len(update_ops) == 12
-        with tf.control_dependencies(update_ops):
-            output = tf.identity(output)
-    
-    return output
+            self.final_layers = [(nch, None)]
+        elif slice_len == 32768:
+            self.final_layers = [
+                (dim, bn_layer()),
+                (nch, None)
+            ]
+        elif slice_len == 65536:
+            self.final_layers = [
+                (dim, bn_layer()),
+                (nch, None)
+            ]
 
+    def conv1d_transpose(self, inputs, filters, kernel_size, stride):
+        # Use Conv2DTranspose and reshape to simulate 1D transposed convolution
+        x = tf.expand_dims(inputs, axis=1)  # (B, 1, T, C)
+        x = layers.Conv2DTranspose(filters=filters,
+                                   kernel_size=(1, kernel_size),
+                                   strides=(1, stride),
+                                   padding='same')(x)
+        return x[:, 0]  # Remove dummy spatial dimension
+
+    def call(self, z, training=False):
+        dim_mul = 16 if self.slice_len == 16384 else 32
+        x = self.fc(z)
+        x = self.reshape(x)
+        if self.use_batchnorm:
+            x = layers.BatchNormalization()(x, training=training)
+        x = tf.nn.relu(x)
+        dim_mul //= 2
+
+        # Main upsampling blocks
+        for filters, bn in self.upconvs:
+            x = self.conv1d_transpose(x, filters, self.kernel_len, 4)
+            if self.use_batchnorm:
+                x = bn(x, training=training)
+            x = tf.nn.relu(x)
+
+        # Final layer(s)
+        if self.slice_len == 16384:
+            filters, _ = self.final_layers[0]
+            x = self.conv1d_transpose(x, filters, self.kernel_len, 4)
+        elif self.slice_len == 32768:
+            for i, (filters, bn) in enumerate(self.final_layers):
+                stride = 4 if i == 0 else 2
+                x = self.conv1d_transpose(x, filters, self.kernel_len, stride)
+                if bn is not None:
+                    x = bn(x, training=training)
+                if i == 0:
+                    x = tf.nn.relu(x)
+        elif self.slice_len == 65536:
+            for filters, bn in self.final_layers:
+                x = self.conv1d_transpose(x, filters, self.kernel_len, 4)
+                if bn is not None:
+                    x = bn(x, training=training)
+                x = tf.nn.relu(x)
+        return tf.nn.tanh(x)
 def lrelu(inputs, alpha=0.2):
     return tf.maximum(alpha * inputs, inputs)
 
