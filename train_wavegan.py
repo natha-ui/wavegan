@@ -21,23 +21,28 @@ from wavegan import WaveGANGenerator, WaveGANDiscriminator
 """
 def train(fps, args):
     # Load and preprocess data
-    x = list(loader.decode_extract_and_batch(
-        fps,
-        batch_size=args.train_batch_size,
-        slice_len=args.data_slice_len,
-        decode_fs=args.data_sample_rate,
-        decode_num_channels=args.data_num_channels,
-        decode_fast_wav=args.data_fast_wav,
-        decode_parallel_calls=4,
-        slice_randomize_offset=False if args.data_first_slice else True,
-        slice_first_only=args.data_first_slice,
-        slice_overlap_ratio=0. if args.data_first_slice else args.data_overlap_ratio,
-        slice_pad_end=True if args.data_first_slice else args.data_pad_end,
-        repeat=True,
-        shuffle=True,
-        shuffle_buffer_size=4096,
-        prefetch_size=args.train_batch_size * 4,
-        prefetch_gpu_num=args.data_prefetch_gpu_num)[:, :, 0])
+   dataset = loader.decode_extract_and_batch(
+    fps,
+    batch_size=args.train_batch_size,
+    slice_len=args.data_slice_len,
+    decode_fs=args.data_sample_rate,
+    decode_num_channels=args.data_num_channels,
+    decode_fast_wav=args.data_fast_wav,
+    decode_parallel_calls=4,
+    slice_randomize_offset=False if args.data_first_slice else True,
+    slice_first_only=args.data_first_slice,
+    slice_overlap_ratio=0.0 if args.data_first_slice else args.data_overlap_ratio,
+    slice_pad_end=True if args.data_first_slice else args.data_pad_end,
+    repeat=True,
+    shuffle=True,
+    shuffle_buffer_size=4096,
+    prefetch_size=args.train_batch_size * 4,
+    prefetch_gpu_num=args.data_prefetch_gpu_num
+)
+
+for item in dataset:
+    x = item[:, :, 0]
+    # Your processing code here
 
     # Make z vector
     z = tf.random.uniform([args.train_batch_size, args.wavegan_latent_dim], -1., 1., dtype=tf.float32)
