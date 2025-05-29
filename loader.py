@@ -42,7 +42,7 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
             _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
         except Exception as e:
             print(f"LOADER WARNING: Failed to read {fp} with librosa.load. Error: {e}")
-            _wav, _fs = librosa.core.load('/home/matt/datasets/drumsamples/Korg_KorgS3_KorgS3Set2_Fx70.wav', sr=fs, mono=False)
+            _wav, _fs = librosa.core.load('/content/drive/MyDrive/CatMeowsDataset/Project/other_vocalizations/B_BAC01_MC_MN_SIM01_201.wav', sr=fs, mono=False)
     
     if _wav.ndim == 2:
         _wav = np.swapaxes(_wav, 0, 1)
