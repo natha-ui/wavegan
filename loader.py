@@ -4,6 +4,16 @@ from scipy.io import wavfile
 import librosa
 import tensorflow as tf
 
+import os
+import numpy as np
+from scipy.io import wavfile
+import librosa
+import tensorflow as tf
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.WARNING)
+
 def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
     """Decodes audio file paths into 32-bit floating point vectors.
     
@@ -21,6 +31,11 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
     if isinstance(fp, tf.Tensor):
         fp = tf.compat.as_str_any(fp)
     
+    # Check if the file exists
+    if not os.path.exists(fp):
+        logging.error(f"File not found: {fp}")
+        return None
+    
     if fast_wav:
         # Read with scipy iofile.read (fast).
         try:
@@ -34,15 +49,15 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
             else:
                 raise NotImplementedError('Scipy cannot process atypical WAV files.')
         except Exception as e:
-            print(f"LOADER WARNING: Failed to read {fp} with scipy.io.wavfile.read. Error: {e}")
+            logging.warning(f"Failed to read {fp} with scipy.io.wavfile.read. Error: {e}")
             _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
     else:
         # Decode with librosa load (slow but supports file formats like mp3).
         try:
             _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
         except Exception as e:
-            print(f"LOADER WARNING: Failed to read {fp} with librosa.load. Error: {e}")
-            _wav, _fs = librosa.core.load('/content/drive/MyDrive/CatMeowsDataset/Project/other_vocalizations/B_BAC01_MC_MN_SIM01_201.wav', sr=fs, mono=False)
+            logging.warning(f"Failed to read {fp} with librosa.load. Error: {e}")
+            _wav, _fs = librosa.core.load('/home/matt/datasets/drumsamples/Korg_KorgS3_KorgS3Set2_Fx70.wav', sr=fs, mono=False)
     
     if _wav.ndim == 2:
         _wav = np.swapaxes(_wav, 0, 1)
