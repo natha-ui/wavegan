@@ -38,9 +38,9 @@ def train(fps, args):
     shuffle_buffer_size=4096,
     prefetch_size=args.train_batch_size * 4,
     prefetch_gpu_num=args.data_prefetch_gpu_num
-  )
+   )
 
-  for item in dataset:
+   for item in dataset:
     x = item[:, :, 0]
     # Your processing code here
 
