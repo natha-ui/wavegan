@@ -37,17 +37,29 @@ def train(fps, args):
      shuffle=True,
      shuffle_buffer_size=4096,
      prefetch_size=args.train_batch_size * 4,
-     prefetch_gpu_num=args.data_prefetch_gpu_num
-    )
+     prefetch_gpu_num=args.data_prefetch_gpu_num)[:,:,0]
    
     # Make z vector
-    z = tf.random.uniform([args.train_batch_size, args.wavegan_latent_dim], -1., 1., dtype=tf.float32)
+    # Generate latent vector z
+    z = tf.random.uniform([args.train_batch_size, args.wavegan_latent_dim], -1., 1.)
 
-    # Define generator
-    G_z = WaveGANGenerator(z, **args.wavegan_g_kwargs, train=True)
+    # Build Generator output
+    G_z = WaveGANGenerator(z, train=True, **args.wavegan_g_kwargs)
 
+    # Optional post-processing filter
     if args.wavegan_genr_pp:
-        G_z = tf.keras.layers.Conv1D(1, args.wavegan_genr_pp_len, use_bias=False, padding='same')(G_z)
+        pp_conv = tf.keras.layers.Conv1D(
+            filters=1,
+            kernel_size=args.wavegan_genr_pp_len,
+            use_bias=False,
+            padding='same',
+            name='pp_filt'
+        )
+        G_z = pp_conv(G_z)
+
+    # Collect generator trainable variables
+    # If you're using functional code (not a Keras Model object), you may need to collect from layers manually
+    G_vars = [v for v in tf.trainable_variables() if v.name.startswith('wavegan_generator')]
 
     # Print generator summary
     print('-' * 80)
