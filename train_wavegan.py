@@ -44,8 +44,8 @@ def train(fps, args):
     z = tf.random.uniform([args.train_batch_size, args.wavegan_latent_dim], -1., 1., dtype=tf.float32)
 
     # Define generator
-    G = WaveGANGenerator(**args.wavegan_g_kwargs)
-    G_z = G(z, training=True)
+    G_z = WaveGANGenerator(z, **args.wavegan_g_kwargs, train=True)
+
     if args.wavegan_genr_pp:
         G_z = tf.keras.layers.Conv1D(1, args.wavegan_genr_pp_len, use_bias=False, padding='same')(G_z)
 
