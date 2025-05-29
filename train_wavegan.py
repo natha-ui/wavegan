@@ -21,7 +21,7 @@ from wavegan import WaveGANGenerator, WaveGANDiscriminator
 """
 def train(fps, args):
     # Load and preprocess data
-    x = loader.decode_extract_and_batch(
+    x = list(loader.decode_extract_and_batch(
         fps,
         batch_size=args.train_batch_size,
         slice_len=args.data_slice_len,
@@ -37,7 +37,7 @@ def train(fps, args):
         shuffle=True,
         shuffle_buffer_size=4096,
         prefetch_size=args.train_batch_size * 4,
-        prefetch_gpu_num=args.data_prefetch_gpu_num)[:, :, 0]
+        prefetch_gpu_num=args.data_prefetch_gpu_num)[:, :, 0])
 
     # Make z vector
     z = tf.random.uniform([args.train_batch_size, args.wavegan_latent_dim], -1., 1., dtype=tf.float32)
