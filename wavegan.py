@@ -46,7 +46,7 @@ def WaveGANGenerator(
     dim_mul = 16 if slice_len == 16384 else 32
     output = z
     with tf.name_scope('z_project'):
-        output = Dense(4096 * dim * dim_mul)(output)
+        output = Dense(16 * dim * dim_mul)(output)
         output = Reshape((16, dim * dim_mul))(output)
         output = batchnorm(output)
     output = tf.nn.relu(output)
