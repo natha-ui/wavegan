@@ -98,83 +98,56 @@ def apply_phaseshuffle(x, rad, pad_type='reflect'):
     return x
 
 class WaveGANDiscriminator(Model):
-    def __init__(self, kernel_len=25, dim=64, use_batchnorm=False, phaseshuffle_rad=0, slice_len=16384):
-        super().__init__()
+    def __init__(self, slice_len=16384, nch=1, kernel_len=25, dim=64,
+                 use_batchnorm=False, phaseshuffle_rad=0):
+        super(WaveGANDiscriminator, self).__init__()
+        assert slice_len in [16384, 32768, 65536]
+        self.slice_len = slice_len
+        self.nch = nch
+        self.kernel_len = kernel_len
+        self.dim = dim
         self.use_batchnorm = use_batchnorm
         self.phaseshuffle_rad = phaseshuffle_rad
-        self.slice_len = slice_len
 
-        self.conv0 = Conv1D(dim, kernel_size=kernel_len, strides=4, padding='same', name='downconv_0')
-        self.conv1 = Conv1D(dim * 2, kernel_size=kernel_len, strides=4, padding='same', name='downconv_1')
-        self.conv2 = Conv1D(dim * 4, kernel_size=kernel_len, strides=4, padding='same', name='downconv_2')
-        self.conv3 = Conv1D(dim * 8, kernel_size=kernel_len, strides=4, padding='same', name='downconv_3')
-        self.conv4 = Conv1D(dim * 16, kernel_size=kernel_len, strides=4, padding='same', name='downconv_4')
+        def bn_layer():
+            return layers.BatchNormalization() if use_batchnorm else tf.identity
 
-        # Conditionally add conv5 based on slice_len
-        if self.slice_len == 32768:
-            self.conv5 = Conv1D(dim * 32, kernel_size=kernel_len, strides=2, padding='same', name='downconv_5')
-        elif self.slice_len == 65536:
-            self.conv5 = Conv1D(dim * 32, kernel_size=kernel_len, strides=4, padding='same', name='downconv_5')
+        self.downconvs = []
+        dim_mul = 1
+        for i in range(5):
+            conv = layers.Conv1D(dim * dim_mul, kernel_size=kernel_len, strides=4, padding='same')
+            bn = bn_layer()
+            self.downconvs.append((conv, bn))
+            dim_mul *= 2
+
+        if slice_len == 32768:
+            self.extra_conv = (layers.Conv1D(dim * 32, kernel_size=kernel_len, strides=2, padding='same'), bn_layer())
+        elif slice_len == 65536:
+            self.extra_conv = (layers.Conv1D(dim * 32, kernel_size=kernel_len, strides=4, padding='same'), bn_layer())
         else:
-            self.conv5 = None
+            self.extra_conv = None
 
-        # BatchNorm layers if used
-        if use_batchnorm:
-            self.bn1 = BatchNormalization()
-            self.bn2 = BatchNormalization()
-            self.bn3 = BatchNormalization()
-            self.bn4 = BatchNormalization()
-            self.bn5 = BatchNormalization() if self.conv5 else None
-        else:
-            # Identity layers to avoid conditions in call
-            self.bn1 = lambda x: x
-            self.bn2 = lambda x: x
-            self.bn3 = lambda x: x
-            self.bn4 = lambda x: x
-            self.bn5 = lambda x: x
+        self.final_dense = layers.Dense(1)
 
-        self.phaseshuffle = PhaseShuffle(phaseshuffle_rad)
-        self.dense = Dense(1, name='output_dense')
-
-    def call(self, x):
+    def call(self, x, training=False):
         batch_size = tf.shape(x)[0]
 
-        # Layer 0
-        x = self.conv0(x)
-        x = lrelu(x)
-        x = self.phaseshuffle(x)
+        for i, (conv, bn) in enumerate(self.downconvs):
+            x = conv(x)
+            if self.use_batchnorm:
+                x = bn(x, training=training)
+            x = lrelu(x)
+            if self.phaseshuffle_rad > 0 and i < 4:
+                x = apply_phaseshuffle(x, self.phaseshuffle_rad)
 
-        # Layer 1
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = lrelu(x)
-        x = self.phaseshuffle(x)
-
-        # Layer 2
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = lrelu(x)
-        x = self.phaseshuffle(x)
-
-        # Layer 3
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = lrelu(x)
-        x = self.phaseshuffle(x)
-
-        # Layer 4
-        x = self.conv4(x)
-        x = self.bn4(x)
-        x = lrelu(x)
-
-        # Layer 5 if present
-        if self.conv5 is not None:
-            x = self.conv5(x)
-            x = self.bn5(x)
+        if self.extra_conv is not None:
+            conv, bn = self.extra_conv
+            x = conv(x)
+            if self.use_batchnorm:
+                x = bn(x, training=training)
             x = lrelu(x)
 
-        # Flatten and output logit
         x = tf.reshape(x, [batch_size, -1])
-        logits = self.dense(x)[:, 0]
-
+        logits = self.final_dense(x)[:, 0]
         return logits
+
