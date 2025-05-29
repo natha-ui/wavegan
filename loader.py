@@ -9,6 +9,11 @@ from scipy.io import wavread
 import librosa
 import tensorflow as tf
 
+import numpy as np
+from scipy.io import wavfile
+import librosa
+import tensorflow as tf
+
 def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
     """Decodes audio file paths into 32-bit floating point vectors.
     
@@ -27,9 +32,9 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
         fp = tf.compat.as_str_any(fp)
     
     if fast_wav:
-        # Read with scipy wavread (fast).
+        # Read with scipy iofile.read (fast).
         try:
-            _fs, _wav = wavread(fp)
+            _fs, _wav = wavfile.read(fp)
             if fs is not None and fs != _fs:
                 raise NotImplementedError('Scipy cannot resample audio.')
             if _wav.dtype == np.int16:
@@ -39,7 +44,7 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
             else:
                 raise NotImplementedError('Scipy cannot process atypical WAV files.')
         except Exception as e:
-            print(f"LOADER WARNING: Failed to read {fp} with scipy.wavread. Error: {e}")
+            print(f"LOADER WARNING: Failed to read {fp} with scipy.io.wavfile.read. Error: {e}")
             _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
     else:
         # Decode with librosa load (slow but supports file formats like mp3).
@@ -78,7 +83,6 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
             _wav /= factor
     
     return _wav
-    
 def decode_extract_and_batch(
     fps,
     batch_size,
