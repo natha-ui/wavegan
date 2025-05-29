@@ -4,6 +4,7 @@ from scipy.io import wavfile
 import librosa
 import tensorflow as tf
 import logging
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)
