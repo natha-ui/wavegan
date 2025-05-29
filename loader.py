@@ -21,6 +21,7 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
     
     Returns:
         A np.float32 array containing the audio samples at specified sample rate.
+        Returns empty array ([0, 1, num_channels]) on error.
     """
     # Convert TensorFlow tensor to string if necessary
     if isinstance(fp, tf.Tensor):
@@ -29,38 +30,39 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
     # Check if the file exists
     if not os.path.exists(fp):
         logging.error(f"File not found: {fp}")
-        return None
+        return np.zeros([0, 1, num_channels], dtype=np.float32)
     
-    if fast_wav:
-        # Read with scipy iofile.read (fast).
-        try:
-            _fs, _wav = wavfile.read(fp)
-            if fs is not None and fs != _fs:
-                raise NotImplementedError('Scipy cannot resample audio.')
-            if _wav.dtype == np.int16:
-                _wav = _wav.astype(np.float32) / 32768.0
-            elif _wav.dtype == np.float32:
-                _wav = np.copy(_wav)
-            else:
-                raise NotImplementedError('Scipy cannot process atypical WAV files.')
-        except Exception as e:
-            logging.warning(f"Failed to read {fp} with scipy.io.wavfile.read. Error: {e}")
+    # Attempt to read the audio file
+    try:
+        if fast_wav:
+            # Read with scipy.io.wavfile (fast)
+            try:
+                _fs, _wav = wavfile.read(fp)
+                if fs is not None and fs != _fs:
+                    raise NotImplementedError('Scipy cannot resample audio.')
+                if _wav.dtype == np.int16:
+                    _wav = _wav.astype(np.float32) / 32768.0
+                elif _wav.dtype == np.float32:
+                    _wav = np.copy(_wav)
+                else:
+                    raise NotImplementedError('Scipy cannot process atypical WAV files.')
+            except Exception as e:
+                logging.warning(f"Scipy failed, falling back to librosa for {fp}: {e}")
+                _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
+        else:
+            # Decode with librosa (supports multiple formats)
             _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
-    else:
-        # Decode with librosa load (slow but supports file formats like mp3).
-        try:
-            _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
-        except Exception as e:
-            logging.warning(f"Failed to read {fp} with librosa.load. Error: {e}")
-            _wav, _fs = librosa.core.load('/home/matt/datasets/drumsamples/Korg_KorgS3_KorgS3Set2_Fx70.wav', sr=fs, mono=False)
+    except Exception as e:
+        logging.error(f"Failed to read {fp}: {e}")
+        return np.zeros([0, 1, num_channels], dtype=np.float32)
     
+    # Process audio shape
     if _wav.ndim == 2:
         _wav = np.swapaxes(_wav, 0, 1)
     
     assert _wav.dtype == np.float32
     
-    # At this point, _wav is np.float32 either [nsamps,] or [nsamps, nch].
-    # We want [nsamps, 1, nch] to mimic 2D shape of spectral feats.
+    # Reshape to [nsamps, 1, nch]
     if _wav.ndim == 1:
         nsamps = _wav.shape[0]
         nch = 1
@@ -68,21 +70,24 @@ def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
         nsamps, nch = _wav.shape
     _wav = np.reshape(_wav, [nsamps, 1, nch])
     
-    # Average (mono) or expand (stereo) channels
+    # Handle channel mismatch
     if nch != num_channels:
         if num_channels == 1:
             _wav = np.mean(_wav, axis=2, keepdims=True)
-        elif nch > 1 and num_channels == 2:
+        elif nch == 1 and num_channels == 2:
             _wav = np.concatenate([_wav, _wav], axis=2)
         else:
-            raise ValueError('Number of audio channels not equal to num specified')
+            raise ValueError('Number of audio channels must be 1 or 2')
     
+    # Normalize if requested
     if normalize:
         factor = np.max(np.abs(_wav))
         if factor > 0:
             _wav /= factor
     
     return _wav
+
+# The rest of the code (decode_extract_and_batch) remains unchanged
 def decode_extract_and_batch(
     fps,
     batch_size,
@@ -203,8 +208,7 @@ def decode_extract_and_batch(
         if prefetch_gpu_num is not None and prefetch_gpu_num >= 0:
             dataset = dataset.apply(
                 tf.data.experimental.prefetch_to_device(
-                    '/device:GPU:0'.format(prefetch_gpu_num)))
+                    '/device:GPU:{}'.format(prefetch_gpu_num)))
     
     # Get tensors
-   
     return next(iter(dataset))
