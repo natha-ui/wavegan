@@ -464,6 +464,7 @@ if __name__ == '__main__':
     parser.add_argument('mode', type=str, choices=['train', 'preview', 'incept', 'infer'])
     parser.add_argument('train_dir', type=str,
                         help='Training directory')
+    parser.add_argument('--train_epochs', type=int, default=100, help='Number of epochs to train')
     data_args = parser.add_argument_group('Data')
     data_args.add_argument('--data_dir', type=str,
                           help='Data directory containing _only_ audio files to load')
