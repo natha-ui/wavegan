@@ -6,65 +6,67 @@ import sys
 def decode_audio(fp, fs=None, num_channels=1, normalize=False, fast_wav=False):
     """Decodes audio file paths into 32-bit floating point vectors.
 
-  Args:
-    fp: Audio file path.
-    fs: If specified, resamples decoded audio to this rate.
-    mono: If true, averages channels to mono.
-    fast_wav: Assume fp is a standard WAV file (PCM 16-bit or float 32-bit).
+    Args:
+        fp: Audio file path.
+        fs: If specified, resamples decoded audio to this rate.
+        num_channels: Target number of channels (1 for mono, 2 for stereo)
+        normalize: If true, normalizes audio to [-1, 1] range
+        fast_wav: Assume fp is a standard WAV file (PCM 16-bit or float 32-bit)
 
-  Returns:
-    A np.float32 array containing the audio samples at specified sample rate.
-  """
-  #print("loading audio file %s" % fp)
-  if fast_wav:
-    # Read with scipy wavread (fast).
-    _fs, _wav = wavread(fp)
-    if fs is not None and fs != _fs:
-      raise NotImplementedError('Scipy cannot resample audio.')
-    if _wav.dtype == np.int16:
-      _wav = _wav.astype(np.float32)
-      _wav /= 32768.
-    elif _wav.dtype == np.float32:
-      _wav = np.copy(_wav)
+    Returns:
+        A np.float32 array containing the audio samples at specified sample rate.
+    """
+    #print("loading audio file %s" % fp)
+    if fast_wav:
+        # Read with scipy wavread (fast).
+        _fs, _wav = wavread(fp)
+        if fs is not None and fs != _fs:
+            raise NotImplementedError('Scipy cannot resample audio.')
+        if _wav.dtype == np.int16:
+            _wav = _wav.astype(np.float32)
+            _wav /= 32768.
+        elif _wav.dtype == np.float32:
+            _wav = np.copy(_wav)
+        else:
+            raise NotImplementedError('Scipy cannot process atypical WAV files.')
     else:
-      raise NotImplementedError('Scipy cannot process atypical WAV files.')
-  else:
-    # Decode with librosa load (slow but supports file formats like mp3).
-    import librosa
-    try:
-      _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
-    except:
-      print("LOADER WARNING: Failed on %s" % fp)
-      _wav,_fs=librosa.core.load('/home/matt/datasets/drumsamples/Korg_KorgS3_KorgS3Set2_Fx70.wav',sr=fs,mono=False)
-    if _wav.ndim == 2:
-      _wav=np.swapaxes(_wav,0,1)
+        # Decode with librosa load (slow but supports file formats like mp3).
+        import librosa
+        try:
+            _wav, _fs = librosa.core.load(fp, sr=fs, mono=False)
+        except:
+            print("LOADER WARNING: Failed on %s" % fp)
+            _wav,_fs=librosa.core.load('/home/matt/datasets/drumsamples/Korg_KorgS3_KorgS3Set2_Fx70.wav',sr=fs,mono=False)
+        if _wav.ndim == 2:
+            _wav = np.swapaxes(_wav,0,1)
 
-  assert _wav.dtype == np.float32
+    assert _wav.dtype == np.float32
 
-  # At this point, _wav is np.float32 either [nsamps,] or [nsamps, nch].
-  # We want [nsamps, 1, nch] to mimic 2D shape of spectral feats.
-  if _wav.ndim == 1:
-    nsamps = _wav.shape[0]
-    nch = 1
-  else:
-    nsamps, nch = _wav.shape
-  _wav = np.reshape(_wav, [nsamps, 1, nch])
+    # At this point, _wav is np.float32 either [nsamps,] or [nsamps, nch].
+    # We want [nsamps, 1, nch] to mimic 2D shape of spectral feats.
+    if _wav.ndim == 1:
+        nsamps = _wav.shape[0]
+        nch = 1
+    else:
+        nsamps, nch = _wav.shape
+    _wav = np.reshape(_wav, [nsamps, 1, nch])
  
-  # Average (mono) or expand (stereo) channels
-  if nch != num_channels:
-    if num_channels == 1:
-      _wav = np.mean(_wav, 2, keepdims=True)
-    elif nch == 1 and num_channels == 2:
-      _wav = np.concatenate([_wav, _wav], axis=2)
-    else:
-      raise ValueError('Number of audio channels not equal to num specified')
+    # Average (mono) or expand (stereo) channels
+    if nch != num_channels:
+        if num_channels == 1:
+            _wav = np.mean(_wav, 2, keepdims=True)
+        elif nch == 1 and num_channels == 2:
+            _wav = np.concatenate([_wav, _wav], axis=2)
+        else:
+            raise ValueError('Number of audio channels not equal to num specified')
 
-  if normalize:
-    factor = np.max(np.abs(_wav))
-    if factor > 0:
-      _wav /= factor
+    if normalize:
+        factor = np.max(np.abs(_wav))
+        if factor > 0:
+            _wav /= factor
 
-  return _wav
+    return _wav
+
 
 def decode_extract_and_batch(
     fps,
@@ -159,7 +161,7 @@ def decode_extract_and_batch(
     # Device prefetching
     if prefetch_gpu_num is not None and prefetch_gpu_num >= 0:
         dataset = dataset.apply(
-            tf.data.experimental.prefetch_to_device(f'/device:GPU:{prefetch_gpu_num}')
+            tf.data.experimental.prefetch_to_device(f'/device:GPU:{prefetch_gpu_num}'))
     elif prefetch_size is not None:
         dataset = dataset.prefetch(prefetch_size)
 
