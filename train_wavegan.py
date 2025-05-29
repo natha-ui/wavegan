@@ -61,7 +61,7 @@ def train(fps, args):
 
     # Collect generator trainable variables
     # If you're using functional code (not a Keras Model object), you may need to collect from layers manually
-    G_vars = [v for v in tf.trainable_variables() if v.name.startswith('wavegan_generator')]
+    G_vars = G.trainable_variables
 
     # Print generator summary
     print('-' * 80)
