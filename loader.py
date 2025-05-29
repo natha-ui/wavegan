@@ -3,12 +3,6 @@ import numpy as np
 from scipy.io import wavfile
 import librosa
 import tensorflow as tf
-
-import os
-import numpy as np
-from scipy.io import wavfile
-import librosa
-import tensorflow as tf
 import logging
 
 # Configure logging
