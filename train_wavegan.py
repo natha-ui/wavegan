@@ -47,7 +47,8 @@ def train(fps, args):
 
     # Build Generator output
     # Make generator
-    G_z = WaveGANGenerator(z, train=True, **args.wavegan_g_kwargs)
+    G = WaveGANGenerator(**args.wavegan_g_kwargs)
+    G_z = G(z, training=True)
 
     if args.wavegan_genr_pp:
         pp_filt_layer = tf.keras.layers.Conv1D(
@@ -59,9 +60,9 @@ def train(fps, args):
         )
         G_z = pp_filt_layer(G_z)
 
-    # Get generator trainable variables
-    # Assuming WaveGANGenerator is a tf.keras.Model or returns a model with layers
-    G_vars = tf.keras.backend.trainable_variables(G_z)
+    # Get trainable variables
+    G_vars = G.trainable_variables
+
 
     # Print generator summary
     print('-' * 80)
